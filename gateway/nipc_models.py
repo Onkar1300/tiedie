@@ -151,6 +151,24 @@ class DataApp(db.Model):
         self.data_app_id = data_app_id
         self.events = events
 
+
+class DataAppTopic(db.Model):
+    """Backing table for mosquitto-go-auth ACLs.
+
+    The broker config queries this object to determine allowed MQTT topics for
+    a given username (EndpointApp.applicationName).
+    """
+
+    __tablename__ = "data_app_topics"
+
+    # MQTT username (EndpointApp.applicationName)
+    data_app_id = mapped_column(String, primary_key=True)
+    topic = mapped_column(String, primary_key=True)
+
+    def __init__(self, data_app_id: str, topic: str):
+        self.data_app_id = data_app_id
+        self.topic = topic
+
 class Event(db.Model):
     """Represents an event."""
     __tablename__ = "event"

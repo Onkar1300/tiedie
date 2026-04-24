@@ -24,6 +24,7 @@ from flask import Blueprint, Response, jsonify, make_response, request
 from sqlalchemy import select
 from ap_factory import ble_ap
 from database import session
+from data_producer import create_topic_from_event
 from access_point_responses import (
     BleConnectionError,
     BleDisconnectError,
@@ -33,7 +34,7 @@ from access_point_responses import (
 )
 from access_point import BleConnectOptions
 from models import Device, EndpointApp
-from nipc_models import BleExtension, DataApp, SdfModel, Event
+from nipc_models import BleExtension, DataApp, DataAppTopic, SdfModel, Event
 from tiedie_exceptions import SchemaError
 
 # NIPC Problem Details Error Types Constants
@@ -948,6 +949,27 @@ def register_data_app():
 
         data_app = DataApp(data_app_id, [ev["event"] for ev in events])
         session.add(data_app)
+        session.flush()
+
+        endpoint_app = session.get(EndpointApp, data_app_id)
+        if endpoint_app is None:
+            return create_nipc_problem_response(
+                NipcProblemTypes.INVALID_ID,
+                HTTPStatus.NOT_FOUND,
+                "Not Found",
+                f"Endpoint app {data_app_id} not found"
+            )
+
+        mqtt_username = endpoint_app.applicationName
+        # Replace ACL rows for this username.
+        session.query(DataAppTopic).filter_by(data_app_id=mqtt_username).delete()
+        for ev in events:
+            event_name = ev.get("event")
+            if not event_name:
+                continue
+            topic = create_topic_from_event(str(data_app_id), event_name)
+            session.add(DataAppTopic(mqtt_username, topic))
+
         session.commit()
         return jsonify(body), HTTPStatus.OK
     except Exception as e: # pylint: disable=broad-except
@@ -1056,6 +1078,26 @@ def update_data_app():
 
         # Update the data app events
         data_app.events = [ev["event"] for ev in events]
+
+        endpoint_app = session.get(EndpointApp, data_app_id)
+        if endpoint_app is None:
+            return create_nipc_problem_response(
+                NipcProblemTypes.INVALID_ID,
+                HTTPStatus.NOT_FOUND,
+                "Not Found",
+                f"Endpoint app {data_app_id} not found"
+            )
+
+        mqtt_username = endpoint_app.applicationName
+        # Replace ACL rows for this username.
+        session.query(DataAppTopic).filter_by(data_app_id=mqtt_username).delete()
+        for ev in events:
+            event_name = ev.get("event")
+            if not event_name:
+                continue
+            topic = create_topic_from_event(str(data_app_id), event_name)
+            session.add(DataAppTopic(mqtt_username, topic))
+
         session.commit()
         return jsonify(body), HTTPStatus.OK
     except Exception as e: # pylint: disable=broad-except

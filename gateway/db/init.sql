@@ -3,5 +3,9 @@
 -- See LICENSE file in this distribution.
 -- SPDX-License-Identifier: Apache-2.0
 
-CREATE DATABASE tiedie;
+-- Intentionally empty.
+--
+-- docker-compose.yml already creates the `tiedie` database via POSTGRES_DB.
+-- Creating it here would fail on a fresh container initialization.
+
 

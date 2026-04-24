@@ -270,7 +270,7 @@ class ArgumentParser(argparse.ArgumentParser):
             action="store_false")
         self.add_argument(
             "--device",
-            choices=["silabs", "mock"],
+            choices=["silabs", "mock", "grpc"],
             help="Device",
             default="silabs"
         )
@@ -336,6 +336,7 @@ def get_connector(args=None):
     connector = []
     if args.device != "silabs":
         return None
+
     if args.cpc:
         for cpc in args.cpc:
             try:
