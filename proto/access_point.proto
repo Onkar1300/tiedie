@@ -1,0 +1,116 @@
+// TieDie Access Point ↔ Gateway gRPC contract (Checkpoint 2)
+
+syntax = "proto3";
+
+package tiedie.ap;
+
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.tiedie.ap.proto";
+
+service AccessPointService {
+  rpc Health(HealthCheckRequest) returns (HealthCheckResponse);
+
+  rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc Discover(DiscoverRequest) returns (DiscoverResponse);
+  rpc Read(ReadRequest) returns (ReadResponse);
+  rpc Write(WriteRequest) returns (WriteResponse);
+  rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
+
+  // Server stream of advertisement events from an AP.
+  rpc StreamAdvertisements(AdvertisementStreamRequest) returns (stream AdvertisementEvent);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1; // e.g. "SERVING"
+}
+
+message BleConnectOptions {
+  // Optional list of service UUIDs to restrict discovery.
+  repeated string service_uuids = 1;
+
+  // Whether the AP may use cached service discovery.
+  bool cached = 2;
+
+  // How long an idle cached entry may live before eviction.
+  uint32 cache_idle_purge_seconds = 3;
+}
+
+message ConnectRequest {
+  string mac_address = 1;
+  BleConnectOptions options = 2;
+  uint32 retries = 3;
+}
+
+message ConnectResponse {
+  bool connected = 1;
+  string error = 2;
+}
+
+message DiscoverRequest {
+  string mac_address = 1;
+  BleConnectOptions options = 2;
+  uint32 retries = 3;
+}
+
+message GattCharacteristic {
+  string uuid = 1;
+  repeated string flags = 2; // e.g. "read", "write", "notify"
+}
+
+message GattService {
+  string uuid = 1;
+  repeated GattCharacteristic characteristics = 2;
+}
+
+message DiscoverResponse {
+  repeated GattService services = 1;
+  string error = 2;
+}
+
+message ReadRequest {
+  string mac_address = 1;
+  string service_uuid = 2;
+  string characteristic_uuid = 3;
+}
+
+message ReadResponse {
+  bytes value = 1;
+  string error = 2;
+}
+
+message WriteRequest {
+  string mac_address = 1;
+  string service_uuid = 2;
+  string characteristic_uuid = 3;
+  bytes value = 4;
+}
+
+message WriteResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message DisconnectRequest {
+  string mac_address = 1;
+}
+
+message DisconnectResponse {
+  bool disconnected = 1;
+  string error = 2;
+}
+
+message AdvertisementStreamRequest {
+  // AP identity; for multi-AP routing later, AP IP address is the stable ID.
+  string ap_ip = 1;
+}
+
+message AdvertisementEvent {
+  string mac_address = 1;
+  int32 rssi = 2;
+  string ap_ip = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
