@@ -15,5 +15,7 @@ fi
 
 mkdir $CACERTDIR
 
+export MSYS_NO_PATHCONV=1
+
 openssl genrsa -out $CACERTDIR/ca.key 4096
 openssl req -config tiedie-ca-openssl.cnf -x509 -new -nodes -key $CACERTDIR/ca.key -sha256 -days 365 -out $CACERTDIR/ca.pem -subj "/CN=TieDie Test CA/C=US/O=MyOrg/OU=CA.$$"
