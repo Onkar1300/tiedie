@@ -44,6 +44,7 @@ class BleExtension(db.Model):
     pairing_pass_key = mapped_column(Integer)
     pairing_oob_key = mapped_column(String)
     pairing_oobrn = mapped_column(BigInteger)
+    ap_ip = mapped_column(String, nullable=True)
 
     device: Mapped[Device] = relationship(back_populates="ble_extension")
 
@@ -61,6 +62,7 @@ class BleExtension(db.Model):
         pairing_pass_key,
         pairing_oob_key,
         pairing_oobrn,
+        ap_ip=None,
     ):
         self.device_id = device_id
         self.device_mac_address = device_mac_address
@@ -74,6 +76,7 @@ class BleExtension(db.Model):
         self.pairing_pass_key = pairing_pass_key
         self.pairing_oob_key = pairing_oob_key
         self.pairing_oobrn = pairing_oobrn
+        self.ap_ip = ap_ip
 
     def __repr__(self):
         return f"<id {self.device_id}>"

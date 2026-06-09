@@ -163,7 +163,12 @@ def _build_connection_response(device_id: str, services) -> dict:
                             {
                                 "characteristicID": char.characteristic_id,
                                 "flags": char.properties,
-                                "descriptors": char.descriptors
+                                "descriptors": [
+                                    {
+                                        "descriptorID": desc.descriptor_id
+                                    }
+                                    for desc in char.descriptors.values()
+                                ]
                             }
                             for char in svc.characteristics.values()
                         ]
@@ -254,6 +259,16 @@ def connect(device_id: str):
         response_data = _build_connection_response(device_id, discover_result.services)
         return jsonify(response_data), HTTPStatus.OK
     except (BleConnectionError, BleDiscoveryError) as e:
+        print("CONNECTION EXCEPTION:", repr(e))
+
+        # Best-effort cleanup: if connect succeeded but discovery failed (or we timed out),
+        # the Pi/dongle may still be connected. Disconnect so subsequent attempts don't hit
+        # "Already connected".
+        try:
+            ble_ap().disconnect(device.device_mac_address)
+        except Exception:
+            pass
+
         return create_nipc_problem_response(
             NipcProblemTypes.PROTOCOLMAP_BLE_NO_CONNECTION,
             HTTPStatus.BAD_REQUEST,
@@ -495,6 +510,83 @@ def extract_protocol_map(property_def: dict, protocol: str = 'ble') -> dict:
 
     return protocol_map[protocol]
 
+
+@control_app.route('/extensions/<device_id>/properties/read', methods=['POST'])
+@authenticate_user
+def read_characteristic(device_id: str):
+    """Read characteristic directly."""
+    try:
+        request_json = request.json
+        if not request_json:
+            return create_nipc_problem_response(
+                NipcProblemTypes.INVALID_SDF_URL,
+                HTTPStatus.BAD_REQUEST,
+                "Missing Request Body",
+                "Request body is required"
+            )
+            
+        ble_map = request_json.get('sdfProtocolMap', {}).get('ble', {})
+        service_id = ble_map.get('serviceID')
+        char_id = ble_map.get('characteristicID')
+        
+        device = session.get(BleExtension, device_id)
+        if not device:
+            return create_nipc_problem_response(
+                NipcProblemTypes.INVALID_ID,
+                HTTPStatus.NOT_FOUND,
+                "Device Not Found",
+                f"Device ID {device_id} does not exist"
+            )
+            
+        result = ble_ap().read(device.device_mac_address, service_id.lower(), char_id.lower())
+        value_b64 = base64.b64encode(result.value).decode('utf-8')
+        return jsonify({"value": value_b64}), HTTPStatus.OK
+    except Exception as e:
+        return create_nipc_problem_response(
+            NipcProblemTypes.PROPERTY_READ_FAILED,
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            f"Unexpected error: {str(e)}"
+        )
+
+@control_app.route('/extensions/<device_id>/properties/write', methods=['POST'])
+@authenticate_user
+def write_characteristic(device_id: str):
+    """Write characteristic directly."""
+    try:
+        request_json = request.json
+        if not request_json:
+            return create_nipc_problem_response(
+                NipcProblemTypes.INVALID_SDF_URL,
+                HTTPStatus.BAD_REQUEST,
+                "Missing Request Body",
+                "Request body is required"
+            )
+            
+        ble_map = request_json.get('sdfProtocolMap', {}).get('ble', {})
+        service_id = ble_map.get('serviceID')
+        char_id = ble_map.get('characteristicID')
+        value_b64 = request_json.get('value')
+        
+        device = session.get(BleExtension, device_id)
+        if not device:
+            return create_nipc_problem_response(
+                NipcProblemTypes.INVALID_ID,
+                HTTPStatus.NOT_FOUND,
+                "Device Not Found",
+                f"Device ID {device_id} does not exist"
+            )
+            
+        binary_data = base64.b64decode(value_b64)
+        ble_ap().write(device.device_mac_address, service_id.lower(), char_id.lower(), binary_data)
+        return jsonify({"value": value_b64}), HTTPStatus.OK
+    except Exception as e:
+        return create_nipc_problem_response(
+            NipcProblemTypes.PROPERTY_WRITE_FAILED,
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            f"Unexpected error: {str(e)}"
+        )
 
 @control_app.route('/devices/<device_id>/properties', methods=['GET'])
 @authenticate_user

@@ -19,7 +19,10 @@ service AccessPointService {
   rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
 
   // Server stream of advertisement events from an AP.
-  rpc StreamAdvertisements(AdvertisementStreamRequest) returns (stream AdvertisementEvent);
+  rpc StreamAdvertisements(AdvertisementStreamRequest) returns (stream AdvertisementBatch);
+
+  // Server stream of connection events from an AP.
+  rpc StreamConnectionEvents(ConnectionStreamRequest) returns (stream ConnectionEvent);
 }
 
 message HealthCheckRequest {}
@@ -111,6 +114,21 @@ message AdvertisementStreamRequest {
 message AdvertisementEvent {
   string mac_address = 1;
   int32 rssi = 2;
+  string ap_ip = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message AdvertisementBatch {
+  repeated AdvertisementEvent events = 1;
+}
+
+message ConnectionStreamRequest {
+  string ap_ip = 1;
+}
+
+message ConnectionEvent {
+  string mac_address = 1;
+  bool connected = 2;
   string ap_ip = 3;
   google.protobuf.Timestamp timestamp = 4;
 }

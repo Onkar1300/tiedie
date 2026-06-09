@@ -150,3 +150,27 @@ class AdvertisementEvent(_message.Message):
     ap_ip: str
     timestamp: _timestamp_pb2.Timestamp
     def __init__(self, mac_address: _Optional[str] = ..., rssi: _Optional[int] = ..., ap_ip: _Optional[str] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class AdvertisementBatch(_message.Message):
+    __slots__ = ("events",)
+    EVENTS_FIELD_NUMBER: _ClassVar[int]
+    events: _containers.RepeatedCompositeFieldContainer[AdvertisementEvent]
+    def __init__(self, events: _Optional[_Iterable[_Union[AdvertisementEvent, _Mapping]]] = ...) -> None: ...
+
+class ConnectionStreamRequest(_message.Message):
+    __slots__ = ("ap_ip",)
+    AP_IP_FIELD_NUMBER: _ClassVar[int]
+    ap_ip: str
+    def __init__(self, ap_ip: _Optional[str] = ...) -> None: ...
+
+class ConnectionEvent(_message.Message):
+    __slots__ = ("mac_address", "connected", "ap_ip", "timestamp")
+    MAC_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    CONNECTED_FIELD_NUMBER: _ClassVar[int]
+    AP_IP_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    mac_address: str
+    connected: bool
+    ap_ip: str
+    timestamp: _timestamp_pb2.Timestamp
+    def __init__(self, mac_address: _Optional[str] = ..., connected: bool = ..., ap_ip: _Optional[str] = ..., timestamp: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...

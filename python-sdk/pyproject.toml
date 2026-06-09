@@ -28,3 +28,8 @@ test = [
     "responses",
     "pytest-cov>=4.1"
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tiedie*"]
+exclude = ["experiments*"]
